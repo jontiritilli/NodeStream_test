@@ -3,11 +3,20 @@ const fs = require('fs');
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
+const videofolder = './assets/'
 
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname + '/index.html'));
+    res.sendFile(path.join(__dirname, '/index.html'));
+});
+
+app.get('/list', (req, res) => {
+    fs.readdir(videofolder, (err, files) => {
+        files.forEach(file => {
+            res.send(file.toString());
+        });
+    })
 });
 
 app.get('/video', (req, res) => {
@@ -17,15 +26,15 @@ app.get('/video', (req, res) => {
     const range = req.headers.range;
 
     if(range){
-        const parts = range.replace('/bytes=/', "").split("-");
+        const parts = range.replace(/bytes=/, "").split("-");
         const start = parseInt(parts[0], 10);
-        const end = parts[1] ? parseInt(parts[1], 10) : filesize-1;
+        const end = parts[1] ? parseInt(parts[1], 10) : filesize - 1;
 
-        const chunksize = (end-start)+1
+        const chunksize = (end-start) + 1
 
         const file = fs.createReadStream(path, {start, end});
         const head = {
-          'Content-Range': `bytes ${start}-${end}/${filesize}`,
+          'Content-Range': `bytes ${start} - ${end} / ${filesize}`,
           'Accept-Ranges': 'bytes',
           'Content-Length': chunksize,
           'Content-Type': 'video/mp4',
@@ -34,11 +43,10 @@ app.get('/video', (req, res) => {
         res.writeHead(206, head)
 
         file.pipe(res)
-
     } else {
         const head = {
-        'Content-Length': filesize,
-        'Content-Type': 'video/mp4',
+            'Content-Length': filesize,
+            'Content-Type': 'video/mp4',
         };
         res.writeHead(200, head);
         fs.createReadStream(path).pipe(res);
